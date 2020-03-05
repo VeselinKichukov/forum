@@ -79,10 +79,11 @@ class ThreadsController extends Controller
     /**
      * Display the specified resource.
      *
+     * @param $chanel
      * @param Thread $thread
      * @return View
      */
-    public function show($chanelId, Thread $thread)
+    public function show($chanel, Thread $thread)
     {
         return view('threads.show', [
             'thread' => $thread,
@@ -106,7 +107,7 @@ class ThreadsController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param Thread $thread
-     * @return
+     * @return void
      */
     public function update(Request $request, Thread $thread)
     {
@@ -116,12 +117,24 @@ class ThreadsController extends Controller
     /**
      * Remove the specified resource from storage.
      *
+     * @param $channel
      * @param Thread $thread
-     * @return
+     * @return \Illuminate\Contracts\Routing\ResponseFactory|Response
+     * @throws \Exception
      */
-    public function destroy(Thread $thread)
+    public function destroy($channel, Thread $thread)
     {
-        //
+        if ($thread->user_id != auth()->user()->id) {
+            abort(403, 'You do not have permissions to do this.');
+        }
+
+        $thread->delete();
+
+        if (request()->wantsJson()) {
+            return response([], 204);
+        }
+
+        return redirect('/threads');
     }
 
     /**

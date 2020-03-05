@@ -6,9 +6,20 @@
             <div class="col-md-8">
                 <div class="card">
                     <div class="card-header">
-                        <a href="#">{{$thread->creator->name}}</a>
+                        <div class="level">
+                            <span class="flex">
+                                <a href="{{route('profile', $thread->creator->name)}}">{{$thread->creator->name}}</a>
                         posted :
                         {{$thread->title}}
+                            </span>
+                            <form method="POST" action="{{ $thread->path() }}">
+                                @csrf
+                                @method('DELETE')
+                                <button class="btn btn-outline-danger" type="submit">
+                                    Delete Thread
+                                </button>
+                            </form>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="body">
@@ -51,8 +62,14 @@
                     </form>
                 </div>
             @else
-                <p class="text-center">Please <a href="{{route('login')}}">Sign in</a> to participate in this
-                    discussion.</p>
+                <div class="col-md-4    ">
+                    <p class="text-center">Please <a href="{{route('login')}}">Sign in</a> to participate in this
+                        discussion.</p>
+                </div>
+                <div class="col-md-8    ">
+                    <p class="text-center">Please <a href="{{route('login')}}">Sign in</a> to participate in this
+                        discussion.</p>
+                </div>
             @endif
 
         </div>
