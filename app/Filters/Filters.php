@@ -20,7 +20,6 @@ abstract class Filters
 
     public function apply($builder)
     {
-//        var_dump($builder);
         $this->builder = $builder;
 
         foreach ($this->getFilters() as $filter => $value) {

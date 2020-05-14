@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Channel;
+use App\Inspections\Spam;
 use App\Thread;
 use App\Filters\ThreadFilters;
 use App\User;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -56,15 +58,20 @@ class ThreadsController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     *
+     * @param Request $request
+     * @param Spam $spam
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request)
+    public function store(Request $request, Spam $spam)
     {
         $this->validate($request, [
             'title' => 'required',
             'body' => 'required',
             'channel_id' => 'required|exists:channels,id'
         ]);
+
+        $spam->detect(request('body'));
 
         $thread = Thread::create([
             'user_id' => auth()->id(),
@@ -73,21 +80,24 @@ class ThreadsController extends Controller
             'body' => request('body')
         ]);
 
-        return redirect($thread->path());
+        return redirect($thread->path())
+            ->with('flash', 'Your thread has been published.');
     }
 
     /**
      * Display the specified resource.
      *
+     * @param $chanel
      * @param Thread $thread
      * @return View
      */
-    public function show($chanelId, Thread $thread)
+    public function show($chanel, Thread $thread)
     {
-        return view('threads.show', [
-            'thread' => $thread,
-            'replies' => $thread->replies()->paginate(5)
-        ]);
+        if (auth()->check()){
+            auth()->user()->read($thread);
+        }
+
+        return view('threads.show', compact('thread'));
     }
 
     /**
@@ -106,7 +116,7 @@ class ThreadsController extends Controller
      *
      * @param \Illuminate\Http\Request $request
      * @param Thread $thread
-     * @return
+     * @return void
      */
     public function update(Request $request, Thread $thread)
     {
@@ -116,12 +126,22 @@ class ThreadsController extends Controller
     /**
      * Remove the specified resource from storage.
      *
+     * @param $channel
      * @param Thread $thread
-     * @return
+     * @return \Illuminate\Contracts\Routing\ResponseFactory|Response
+     * @throws \Exception
      */
-    public function destroy(Thread $thread)
+    public function destroy($channel, Thread $thread)
     {
-        //
+        $this->authorize('update', $thread);
+
+        $thread->delete();
+
+        if (request()->wantsJson()) {
+            return response([], 204);
+        }
+
+        return redirect('/threads');
     }
 
     /**

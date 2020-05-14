@@ -7,19 +7,31 @@
 require('./bootstrap');
 
 window.Vue = require('vue');
+window.Vue.prototype.authorize = function (handler) {
+    const {user} = window.App;
+    return !!user ? handler(user) : false;
+};
 
 /**
  * The following block of code may be used to automatically register your
  * Vue components. It will recursively scan this directory for the Vue
  * components and automatically register them with their "basename".
  *
- * Eg. ./components/ExampleComponent.vue -> <example-component></example-component>
+ * Eg. ./components/Flash.vue -> <example-component></example-component>
  */
 
 // const files = require.context('./', true, /\.vue$/i)
 // files.keys().map(key => Vue.component(key.split('/').pop().split('.')[0], files(key).default))
 
-Vue.component('example-component', require('./components/ExampleComponent.vue').default);
+Vue.component('replies', require('./components/Replies.vue').default);
+Vue.component('flash', require('./components/Flash.vue').default);
+Vue.component('reply', require('./components/Reply.vue').default);
+Vue.component('favourite', require('./components/Favourite.vue').default);
+Vue.component('new-reply', require('./components/NewReply.vue').default);
+Vue.component('thread-view', require('./pages/Thread.vue').default);
+Vue.component('paginator', require('./components/Paginator.vue').default);
+Vue.component('subscribe-button', require('./components/SubscribeButton.vue').default);
+Vue.component('user-notifications', require('./components/UserNotifications.vue').default);
 
 /**
  * Next, we will create a fresh Vue application instance and attach it to

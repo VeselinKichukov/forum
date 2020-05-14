@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Activity;
 use App\Thread;
 use App\User;
 use Illuminate\Foundation\Testing\DatabaseMigrations;
@@ -14,7 +15,7 @@ class CreateThreadsTest extends TestCase
 {
     use DatabaseMigrations;
 
-    protected $guarded=[];
+    protected $guarded = [];
 
     /** @test */
 
@@ -64,7 +65,7 @@ class CreateThreadsTest extends TestCase
 
     function a_thread_requires_a_valid_channel()
     {
-        factory('App\Channel',2)->create();
+        factory('App\Channel', 2)->create();
 
         $this->publishThread(['channel_id' => null])
             ->assertSessionHasErrors('channel_id');
@@ -73,12 +74,53 @@ class CreateThreadsTest extends TestCase
             ->assertSessionHasErrors('channel_id');
     }
 
+
+    /**
+     * This function is used by the test to simulate threads publishing
+     *
+     * @param $overrides
+     * @return \Illuminate\Foundation\Testing\TestResponse
+     */
     public function publishThread($overrides)
     {
         $this->signIn();
 
         $thread = make('App\Thread', $overrides);
 
-       return $this->post('/threads', $thread->toArray());
+        return $this->post('/threads', $thread->toArray());
     }
+
+    /** @test */
+    function unauthorized_users_may_not_delete_tests()
+    {
+        $thread = create('App\Thread');
+
+        $this->delete($thread->path())->assertRedirect('/login');
+
+        $this->signIn();
+        $this->delete($thread->path())->assertStatus(403);
+
+    }
+
+    /** @test */
+    function authorized_users_can_delete_threads()
+    {
+        $this->withoutExceptionHandling();
+        $this->signIn();
+
+        $thread = create('App\Thread',['user_id' => auth()->user()->id]);
+
+        $reply = create('App\Reply', ['thread_id' => $thread->id]);
+
+        $response = $this->json('DELETE', $thread->path());
+
+        $response->assertStatus(204);
+
+        $this->assertDatabaseMissing('threads', ['id' => $thread->id]);
+        $this->assertDatabaseMissing('replies', ['id' => $reply->id]);
+
+        $this->assertEquals(0, Activity::count());
+    }
+
+
 }
