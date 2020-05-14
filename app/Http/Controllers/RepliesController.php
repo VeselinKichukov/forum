@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Reply;
-use App\Inspections\Spam;
+use App\Rules\SpamFree;
 use App\Thread;
 use Illuminate\Http\Request;
 
@@ -37,16 +37,15 @@ class RepliesController extends Controller
     /**
      *  Store a newly created resource in storage.
      *
+     * @param Request $request
      * @param $channelId
      * @param Thread $thread
-     * @param \App\Inspections\Spam $spam
      * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Http\RedirectResponse
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function store($channelId, Thread $thread)
     {
         try {
-            $this->validateReply();
+            request()->validate(['body' => ['required', new SpamFree()]]);
 
             $reply = $thread->addReply([
                 'body' => request('body'),
@@ -100,7 +99,7 @@ class RepliesController extends Controller
         $this->authorize('update', $reply);
 
         try{
-            $this->validateReply();
+            request()->validate(['body' => ['required', new SpamFree()]]);
 
             $reply->update(['body' => request('body')]);
         }
@@ -129,18 +128,5 @@ class RepliesController extends Controller
         }
 
         return back();
-    }
-
-    /**
-     * @param Spam $spam
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    protected function validateReply()
-    {
-        $this->validate(request(), [
-            'body' => 'required'
-        ]);
-
-        resolve(Spam::class)->detect(request('body'));
     }
 }
