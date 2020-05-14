@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Reply;
+use App\Inspections\Spam;
 use App\Thread;
 use Illuminate\Http\Request;
 
@@ -10,7 +11,7 @@ class RepliesController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('auth');
+        $this->middleware('auth', ['except' => 'index']);
     }
 
     /**
@@ -18,9 +19,9 @@ class RepliesController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index($channelId, Thread $thread)
     {
-        //
+        return $thread->replies()->paginate(5);
     }
 
     /**
@@ -38,28 +39,35 @@ class RepliesController extends Controller
      *
      * @param $channelId
      * @param Thread $thread
-     * @return void
+     * @param \App\Inspections\Spam $spam
+     * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Http\RedirectResponse
      * @throws \Illuminate\Validation\ValidationException
      */
     public function store($channelId, Thread $thread)
     {
-        $this->validate(request(),[
-            'body' => 'required'
-        ]);
+        try {
+            $this->validateReply();
 
-        $thread->addReply([
-            'body' => request('body'),
-            'user_id' => auth()->id()
-        ]);
+            $reply = $thread->addReply([
+                'body' => request('body'),
+                'user_id' => auth()->id()
+            ]);
+        } catch (\Exception $e){
+            return response('Sorry, your reply could not be saved at this time.', 422);
+        }
 
-        return back();
+       if (request()->expectsJson()) {
+           return $reply->load('owner');
+       }
+
+        return back()->with('flash', 'Your reply has been left.');
 
     }
 
     /**
      * Display the specified resource.
      *
-     * @param  \App\Reply  $reply
+     * @param \App\Reply $reply
      * @return \Illuminate\Http\Response
      */
     public function show(Reply $reply)
@@ -70,7 +78,7 @@ class RepliesController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param  \App\Reply  $reply
+     * @param \App\Reply $reply
      * @return \Illuminate\Http\Response
      */
     public function edit(Reply $reply)
@@ -81,23 +89,58 @@ class RepliesController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \App\Reply  $reply
-     * @return \Illuminate\Http\Response
+     * @param \App\Reply $reply
+     * @param Spam $spam
+     * @return void
+     * @throws \Illuminate\Auth\Access\AuthorizationException
+     * @throws \Illuminate\Validation\ValidationException
      */
-    public function update(Request $request, Reply $reply)
+    public function update(Reply $reply)
     {
-        //
+        $this->authorize('update', $reply);
+
+        try{
+            $this->validateReply();
+
+            $reply->update(['body' => request('body')]);
+        }
+        catch (\Exception $e){
+            return response('Sorry, your reply could not be saved at this time.', 422);
+        }
+
+
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param  \App\Reply  $reply
+     * @param \App\Reply $reply
      * @return \Illuminate\Http\Response
+     * @throws \Exception
      */
     public function destroy(Reply $reply)
     {
-        //
+        $this->authorize('update', $reply);
+
+        $reply->delete();
+
+        if (request()->expectsJson()) {
+            return response(['status' => 'Reply deleted']);
+        }
+
+        return back();
+    }
+
+    /**
+     * @param Spam $spam
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function validateReply()
+    {
+        $this->validate(request(), [
+            'body' => 'required'
+        ]);
+
+        resolve(Spam::class)->detect(request('body'));
     }
 }

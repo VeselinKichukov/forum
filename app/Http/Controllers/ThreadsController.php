@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Channel;
+use App\Inspections\Spam;
 use App\Thread;
 use App\Filters\ThreadFilters;
 use App\User;
+use Carbon\Carbon;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -56,15 +58,20 @@ class ThreadsController extends Controller
     /**
      * Store a newly created resource in storage.
      *
-     *
+     * @param Request $request
+     * @param Spam $spam
+     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Routing\Redirector
+     * @throws \Illuminate\Validation\ValidationException
      */
-    public function store(Request $request)
+    public function store(Request $request, Spam $spam)
     {
         $this->validate($request, [
             'title' => 'required',
             'body' => 'required',
             'channel_id' => 'required|exists:channels,id'
         ]);
+
+        $spam->detect(request('body'));
 
         $thread = Thread::create([
             'user_id' => auth()->id(),
@@ -73,7 +80,8 @@ class ThreadsController extends Controller
             'body' => request('body')
         ]);
 
-        return redirect($thread->path());
+        return redirect($thread->path())
+            ->with('flash', 'Your thread has been published.');
     }
 
     /**
@@ -85,10 +93,11 @@ class ThreadsController extends Controller
      */
     public function show($chanel, Thread $thread)
     {
-        return view('threads.show', [
-            'thread' => $thread,
-            'replies' => $thread->replies()->paginate(5)
-        ]);
+        if (auth()->check()){
+            auth()->user()->read($thread);
+        }
+
+        return view('threads.show', compact('thread'));
     }
 
     /**
@@ -124,9 +133,7 @@ class ThreadsController extends Controller
      */
     public function destroy($channel, Thread $thread)
     {
-        if ($thread->user_id != auth()->user()->id) {
-            abort(403, 'You do not have permissions to do this.');
-        }
+        $this->authorize('update', $thread);
 
         $thread->delete();
 

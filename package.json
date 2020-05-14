@@ -22,5 +22,10 @@
         "sass-loader": "^8.0.0",
         "vue": "^2.5.17",
         "vue-template-compiler": "^2.6.10"
+    },
+    "dependencies": {
+        "font-awesome": "^4.7.0",
+        "glyphicons": "^0.2.0",
+        "moment": "^2.24.0"
     }
 }

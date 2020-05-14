@@ -7,6 +7,7 @@ use App\User;
 use App\Thread;
 use Faker\Generator as Faker;
 use Illuminate\Database\Eloquent\Factory;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Str;
 
 /*
@@ -30,13 +31,13 @@ $factory->define(User::class, function (Faker $faker) {
     ];
 });
 
-$factory->define(App\Thread::class,function ($faker) {
-    return[
-        'user_id' => function() {
-        return factory(User::class)->create()->id;
+$factory->define(App\Thread::class, function ($faker) {
+    return [
+        'user_id' => function () {
+            return factory(User::class)->create()->id;
         },
-        'channel_id' => function(){
-        return factory(Channel::class)->create()->id;
+        'channel_id' => function () {
+            return factory(Channel::class)->create()->id;
         },
         'title' => $faker->sentence,
         'body' => $faker->paragraph
@@ -44,25 +45,38 @@ $factory->define(App\Thread::class,function ($faker) {
 
 });
 
-$factory->define(App\Channel::class,function ($faker) {
+$factory->define(App\Channel::class, function ($faker) {
 
     $name = $faker->word;
 
-    return[
+    return [
         'name' => $name,
         'slug' => $name
     ];
 });
 
-$factory->define(App\Reply::class,function ($faker) {
-    return[
-        'thread_id' => function() {
+$factory->define(App\Reply::class, function ($faker) {
+    return [
+        'thread_id' => function () {
             return factory(Thread::class)->create()->id;
         },
-        'user_id' => function() {
+        'user_id' => function () {
             return factory(User::class)->create()->id;
         },
         'body' => $faker->paragraph
+    ];
+
+});
+
+$factory->define(DatabaseNotification::class, function ($faker) {
+    return [
+        'id' => Str::uuid()->toString(),
+        'type' => 'App\Notifications\ThreadWasUpdated',
+        'notifiable_id' => function () {
+            return auth()->id() ?: factory('App\User')->create()->id;
+        },
+        'notifiable_type' => 'App\User',
+        'data' => ['foo' => 'bar']
     ];
 
 });

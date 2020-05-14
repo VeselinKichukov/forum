@@ -7,34 +7,21 @@
                 <div class="modal-header">
                     <h1>
                         {{ $profileUser->name }}
-                        <small>
-                            Since {{ $profileUser->created_at->diffForHumans() }}
-                        </small>
                     </h1>
                 </div>
                 <br>
-                @foreach($threads as $thread)
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="level">
-                               <span class="flex">
-                                 <a href="#">{{$thread->creator->name}}</a> posted:
-                                             {{ $thread->title }}
-                                </span>
-                                <span>
-                                     {{$thread->created_at->diffForHumans()}}
-                                 </span>
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div class="body">
-                                {{$thread->body}}
-                            </div>
-                        </div>
-                    </div>
+                @forelse($activities as $date => $activity)
+                    <h3 class="card-header">{{$date}}</h3>
                     <br>
-                @endforeach
-                {{ $threads->links() }}
+                    @foreach($activity as $record)
+                        @if(view()->exists("profiles.activities.{$record->type}"))
+                        @include("profiles.activities.{$record->type}", ['activity' => $record])
+                        @endif
+                    @endforeach
+                    @empty
+                    <p>There is no activity for this user yet.</p>
+                @endforelse
+                {{--                {{ $threads->links() }}--}}
             </div>
         </div>
     </div>

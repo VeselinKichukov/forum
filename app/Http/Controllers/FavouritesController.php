@@ -20,4 +20,15 @@ class FavouritesController extends Controller
 
         return back();
     }
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param \App\Reply $reply
+     * @return void
+     */
+    public function destroy(Reply $reply)
+    {
+        $reply->unfavourite();
+    }
 }
