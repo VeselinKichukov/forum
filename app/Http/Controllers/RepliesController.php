@@ -5,7 +5,12 @@ namespace App\Http\Controllers;
 use App\Reply;
 use App\Rules\SpamFree;
 use App\Thread;
-use Illuminate\Http\Request;
+use Exception;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class RepliesController extends Controller
 {
@@ -17,7 +22,7 @@ class RepliesController extends Controller
     /**
      * Display a listing of the resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function index($channelId, Thread $thread)
     {
@@ -27,7 +32,7 @@ class RepliesController extends Controller
     /**
      * Show the form for creating a new resource.
      *
-     * @return \Illuminate\Http\Response
+     * @return Response
      */
     public function create()
     {
@@ -37,13 +42,17 @@ class RepliesController extends Controller
     /**
      *  Store a newly created resource in storage.
      *
-     * @param Request $request
      * @param $channelId
      * @param Thread $thread
-     * @return \Illuminate\Database\Eloquent\Model|\Illuminate\Http\RedirectResponse
+     * @return Model
      */
     public function store($channelId, Thread $thread)
     {
+        if (Gate::denies('create', new Reply)) {
+            return response(
+                'You are posting too often.', 422);
+        }
+
         try {
             request()->validate(['body' => ['required', new SpamFree()]]);
 
@@ -51,23 +60,18 @@ class RepliesController extends Controller
                 'body' => request('body'),
                 'user_id' => auth()->id()
             ]);
-        } catch (\Exception $e){
-            return response('Sorry, your reply could not be saved at this time.', 422);
+        } catch (\Exception $e) {
+            return response(
+                'Sorry, your reply could not be saved at this time.', 422);
         }
-
-       if (request()->expectsJson()) {
-           return $reply->load('owner');
-       }
-
-        return back()->with('flash', 'Your reply has been left.');
-
+        return $reply->load('owner');
     }
 
     /**
      * Display the specified resource.
      *
-     * @param \App\Reply $reply
-     * @return \Illuminate\Http\Response
+     * @param Reply $reply
+     * @return Response
      */
     public function show(Reply $reply)
     {
@@ -77,8 +81,8 @@ class RepliesController extends Controller
     /**
      * Show the form for editing the specified resource.
      *
-     * @param \App\Reply $reply
-     * @return \Illuminate\Http\Response
+     * @param Reply $reply
+     * @return Response
      */
     public function edit(Reply $reply)
     {
@@ -88,34 +92,31 @@ class RepliesController extends Controller
     /**
      * Update the specified resource in storage.
      *
-     * @param \App\Reply $reply
+     * @param Reply $reply
      * @param Spam $spam
      * @return void
-     * @throws \Illuminate\Auth\Access\AuthorizationException
-     * @throws \Illuminate\Validation\ValidationException
+     * @throws AuthorizationException
+     * @throws ValidationException
      */
     public function update(Reply $reply)
     {
         $this->authorize('update', $reply);
 
-        try{
+        try {
             request()->validate(['body' => ['required', new SpamFree()]]);
 
             $reply->update(['body' => request('body')]);
-        }
-        catch (\Exception $e){
+        } catch (Exception $e) {
             return response('Sorry, your reply could not be saved at this time.', 422);
         }
-
-
     }
 
     /**
      * Remove the specified resource from storage.
      *
-     * @param \App\Reply $reply
-     * @return \Illuminate\Http\Response
-     * @throws \Exception
+     * @param Reply $reply
+     * @return Response
+     * @throws Exception
      */
     public function destroy(Reply $reply)
     {
