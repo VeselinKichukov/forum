@@ -47,7 +47,7 @@ class ParticipateInForumTest extends TestCase
         $reply =  make('App\Reply', ['body' => null]);
 
         $this->post($thread->path() . '/replies', $reply->toArray())
-            ->assertSessionHasErrors('body');
+            ->assertStatus(422);
     }
 
     /** @test */
@@ -75,7 +75,6 @@ class ParticipateInForumTest extends TestCase
 
         $this->assertDatabaseMissing('replies', ['id' => $reply->id]);
         $this->assertEquals(0,$reply->thread->fresh()->replies_count);
-
     }
 
     /** @test */
@@ -103,7 +102,6 @@ class ParticipateInForumTest extends TestCase
         $this->patch("/replies/{$reply->id}", ['body' => $updatedReply]);
 
         $this->assertDatabaseHas('replies', ['id' => $reply->id, 'body' => $updatedReply]);
-
     }
 
     /** @test */
@@ -119,9 +117,29 @@ class ParticipateInForumTest extends TestCase
             'body' => 'Yahoo Customer Support'
         ]);
 
-        $this->expectException(\Exception::class);
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(422);
+    }
 
-        $this->post($thread->path() . '/replies', $reply->toArray());
+    /** @test */
+
+    function users_may_only_reply_a_maximum_of_once_per_minute()
+    {
+        $this->withoutExceptionHandling();
+
+        $this->signIn();
+
+        $thread = create('App\Thread');
+        $reply = make('App\Reply',[
+            'body' => 'New reply bodyy'
+        ]);
+
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(201);
+
+        $this->post($thread->path() . '/replies', $reply->toArray())
+            ->assertStatus(422);
+
     }
 }
 
